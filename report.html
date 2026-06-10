@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phone insurance subscriber forecasting — model assessment report</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f9fbe7; color: #212121; line-height: 1.7; }
+  .page { max-width: 860px; margin: 2rem auto; padding: 0 1.5rem 4rem; }
+  .sc-hdr { background: #1b5e20; border-radius: 12px; padding: 2rem 1.75rem 1.75rem; margin-bottom: 2rem; }
+  .sc-section { padding: 1.5rem 0; border-bottom: 1px solid #c8e6c9; }
+  .sc-section:last-child { border-bottom: none; }
+  .sc-label { display: inline-block; font-size: 11px; font-weight: 600; color: #fff; background: #2e7d32; padding: 3px 11px; border-radius: 6px; margin-bottom: 0.85rem; letter-spacing: .06em; text-transform: uppercase; }
+  .sc-h2 { font-size: 19px; font-weight: 600; color: #1b5e20; margin: 0 0 .6rem; }
+  .sc-body { font-size: 14px; color: #424242; line-height: 1.75; margin: 0 0 .75rem; }
+  .sc-card { background: #f1f8e9; border: 1px solid #a5d6a7; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: .75rem; }
+  .sc-card-white { background: #fff; border: 1px solid #a5d6a7; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: .75rem; }
+  .sc-snap { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: .75rem 0; }
+  .sc-snap-cell { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: .65rem .9rem; }
+  .sc-snap-label { font-size: 11px; color: #388e3c; font-weight: 600; margin-bottom: 3px; }
+  .sc-snap-val { font-size: 13px; font-weight: 600; color: #1b5e20; }
+  .sc-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .sc-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { font-size: 11px; font-weight: 600; color: #388e3c; padding: 7px 10px; border-bottom: 1px solid #a5d6a7; text-align: left; }
+  td { padding: 6px 10px; border-bottom: 1px solid #e8f5e9; color: #424242; }
+  td.key { font-weight: 600; color: #212121; }
+  .tag-red { background: #ffebee; color: #c62828; font-size: 11px; padding: 2px 7px; border-radius: 5px; font-weight: 600; white-space: nowrap; }
+  .tag-grn { background: #e8f5e9; color: #2e7d32; font-size: 11px; padding: 2px 7px; border-radius: 5px; font-weight: 600; white-space: nowrap; }
+  .tag-amb { background: #fff8e1; color: #e65100; font-size: 11px; padding: 2px 7px; border-radius: 5px; font-weight: 600; white-space: nowrap; }
+  .leak-box { background: #fff8e1; border-left: 3px solid #f57f17; padding: .9rem 1.1rem; margin: .75rem 0; }
+  .fix-box { background: #e8f5e9; border-left: 3px solid #2e7d32; padding: .9rem 1.1rem; margin: .75rem 0; }
+  .mdl-card { border: 1px solid #a5d6a7; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: .75rem; background: #fff; }
+  .mdl-champion { border: 2px solid #2e7d32; }
+  .badge-champ { background: #2e7d32; color: #fff; font-size: 11px; padding: 2px 9px; border-radius: 5px; font-weight: 600; }
+  .badge-chal { background: #66bb6a; color: #1b5e20; font-size: 11px; padding: 2px 9px; border-radius: 5px; font-weight: 600; }
+  .badge-base { background: #f1f8e9; color: #388e3c; font-size: 11px; padding: 2px 9px; border-radius: 5px; font-weight: 600; border: 1px solid #a5d6a7; }
+  .metric-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: .75rem; }
+  .metric-cell { background: #f1f8e9; border-radius: 7px; padding: .5rem .6rem; text-align: center; }
+  .metric-lbl { font-size: 10px; color: #388e3c; font-weight: 600; margin-bottom: 2px; }
+  .metric-val { font-size: 16px; font-weight: 700; color: #1b5e20; }
+  .callout-box { background: #1b5e20; border-radius: 12px; padding: 1rem 1.25rem; margin: .75rem 0; }
+  .rec-card { background: #e8f5e9; border: 1px solid #81c784; border-radius: 12px; padding: .9rem 1.1rem; margin-bottom: .65rem; display: flex; gap: 12px; align-items: flex-start; }
+  .rec-icon { background: #2e7d32; border-radius: 50%; width: 30px; height: 30px; min-width: 30px; display: flex; align-items: center; justify-content: center; }
+  .chart-wrap { position: relative; width: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 6px; font-size: 12px; color: #616161; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+  .split-bar { display: flex; border-radius: 8px; overflow: hidden; height: 34px; margin-bottom: .75rem; }
+  .split-seg { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+  @media (max-width: 600px) {
+    .sc-grid2, .sc-grid3 { grid-template-columns: 1fr; }
+    .metric-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="sc-hdr">
+  <div style="font-size:11px;color:#a5d6a7;font-weight:600;letter-spacing:.08em;margin-bottom:.4rem;text-transform:uppercase;">Asurion · Device Insurance Analytics</div>
+  <div style="font-size:26px;font-weight:700;color:#fff;margin-bottom:.3rem;">Phone insurance subscriber forecasting</div>
+  <div style="font-size:14px;color:#c8e6c9;">Model assessment report &nbsp;·&nbsp; Jan 2019 – Nov 2023</div>
+</div>
+
+<div class="sc-section">
+  <div class="sc-label">01 · Business context</div>
+  <p class="sc-body">Asurion is a leading provider of device insurance, warranty, and support services for cell phones, consumer electronics, and home appliances. With over 300 million devices protected globally, accurate subscriber forecasting is critical to operational and financial planning.</p>
+  <p class="sc-body">This project forecasts <strong>Closing Subs Monthly</strong> — the total number of active phone insurance subscribers at the end of each month, broken down by device model, colour, and market. Predicting this one month ahead enables three key decisions:</p>
+  <div class="sc-grid3" style="margin-bottom:.85rem;">
+    <div class="sc-card"><div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:5px;"><i class="ti ti-shield" aria-hidden="true" style="margin-right:4px;"></i>Claims reserve</div><div style="font-size:12px;color:#424242;">Expected claims scale with the active subscriber base — under-reserving creates financial exposure</div></div>
+    <div class="sc-card"><div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:5px;"><i class="ti ti-box" aria-hidden="true" style="margin-right:4px;"></i>Parts inventory</div><div style="font-size:12px;color:#424242;">Warranty repairs require stocked components per model — wrong forecasts cause stockouts or overstock</div></div>
+    <div class="sc-card"><div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:5px;"><i class="ti ti-mail" aria-hidden="true" style="margin-right:4px;"></i>Renewal campaigns</div><div style="font-size:12px;color:#424242;">Models approaching lifecycle decay need proactive retention campaigns to slow subscriber loss</div></div>
+  </div>
+  <div class="sc-snap">
+    <div class="sc-snap-cell"><div class="sc-snap-label">Period</div><div class="sc-snap-val">Jan 2019 – Nov 2023</div></div>
+    <div class="sc-snap-cell"><div class="sc-snap-label">Markets</div><div class="sc-snap-val">California · Nevada · Texas</div></div>
+    <div class="sc-snap-cell"><div class="sc-snap-label">Brands</div><div class="sc-snap-val">Apple · Samsung · Oppo</div></div>
+    <div class="sc-snap-cell"><div class="sc-snap-label">Example models</div><div class="sc-snap-val">iPhone XS Max · Galaxy S21 · Oppo A15</div></div>
+    <div class="sc-snap-cell"><div class="sc-snap-label">Rows</div><div class="sc-snap-val">13,381</div></div>
+    <div class="sc-snap-cell"><div class="sc-snap-label">Columns</div><div class="sc-snap-val">25</div></div>
+  </div>
+  <div class="sc-card-white" style="margin-top:.85rem;">
+    <div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:.5rem;">Key columns</div>
+    <table>
+      <tr><th style="width:35%;">Column</th><th>Description</th><th style="width:22%;">Role</th></tr>
+      <tr><td class="key">Closing Subs Monthly</td><td>Active subscribers at month-end per SKU</td><td><span class="tag-grn">Target variable</span></td></tr>
+      <tr><td class="key">Model Age (Days)</td><td>Days since device launched — captures lifecycle stage</td><td><span class="tag-grn">Feature</span></td></tr>
+      <tr><td class="key">Size (GB)</td><td>Storage capacity — proxy for price tier</td><td><span class="tag-grn">Feature</span></td></tr>
+      <tr><td class="key">Churn</td><td>Subscribers who cancelled this month</td><td><span class="tag-red">Leakage risk</span></td></tr>
+      <tr><td class="key">Filed Claims</td><td>Warranty claims submitted this month</td><td><span class="tag-red">Leakage risk</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="sc-section">
+  <div class="sc-label">02 · EDA insights</div>
+  <div class="sc-grid2" style="margin-bottom:1.25rem;">
+    <div>
+      <div style="font-size:14px;font-weight:600;color:#1b5e20;margin-bottom:.3rem;">Subscriber distribution is right-skewed</div>
+      <div style="font-size:12px;color:#616161;margin-bottom:.5rem;">Most SKUs carry low subscriber counts. A small number of flagship Apple models dominate volume — making model accuracy on those outliers disproportionately important.</div>
+      <div class="legend"><span><span class="legend-dot" style="background:#2e7d32;"></span>Row count per bin</span></div>
+      <div class="chart-wrap" style="height:190px;"><canvas id="distChart" role="img" aria-label="Right-skewed histogram of Closing Subs Monthly. Most rows fall in 0-500 range.">0–500: ~2500, 500–1k: ~1800, 1k–2k: ~1600, 2k–5k: ~1800, 5k–10k: ~900, 10k+: ~460</canvas></div>
+    </div>
+    <div>
+      <div style="font-size:14px;font-weight:600;color:#1b5e20;margin-bottom:.3rem;">Subscriber base grew, then plateaued</div>
+      <div style="font-size:12px;color:#616161;margin-bottom:.5rem;">Total active subscribers grew steadily from 2019 through 2021, then plateaued as the portfolio matured. New model launches drive spikes; aging devices drive decay.</div>
+      <div class="legend"><span><span class="legend-dot" style="background:#388e3c;"></span>Total subs (indexed, 2019 = 100)</span></div>
+      <div class="chart-wrap" style="height:190px;"><canvas id="trendChart" role="img" aria-label="Line chart showing indexed subscriber growth 2019 to 2021 then plateau through 2023.">2019: 100, 2020: 130, 2021: 175, 2022: 170, 2023: 165</canvas></div>
+    </div>
+  </div>
+  <div class="sc-grid2">
+    <div>
+      <div style="font-size:14px;font-weight:600;color:#1b5e20;margin-bottom:.3rem;">Lifecycle: peak at ~1.7 years, then decay</div>
+      <div style="font-size:12px;color:#616161;margin-bottom:.5rem;">Devices accumulate subscribers for roughly the first 18 months after launch, then subscriber count declines as newer models launch and devices age out.</div>
+      <div class="legend"><span><span class="legend-dot" style="background:#66bb6a;"></span>Avg subscribers by device age</span></div>
+      <div class="chart-wrap" style="height:190px;"><canvas id="lifecycleChart" role="img" aria-label="Line chart showing subscriber lifecycle curve peaking around 540 days.">Peak ~540 days then gradual decay.</canvas></div>
+    </div>
+    <div>
+      <div style="font-size:14px;font-weight:600;color:#1b5e20;margin-bottom:.3rem;">Lag-1 features are the honest predictors</div>
+      <div style="font-size:12px;color:#616161;margin-bottom:.5rem;">After lagging by 1 month, safe features show meaningful correlation. Raw Churn and Filed Claims are excluded — their higher correlation is inflated by data leakage.</div>
+      <div class="legend"><span><span class="legend-dot" style="background:#2e7d32;"></span>Safe &nbsp;&nbsp;</span><span><span class="legend-dot" style="background:#e53935;"></span>Leakage risk</span></div>
+      <div class="chart-wrap" style="height:190px;"><canvas id="corrChart" role="img" aria-label="Horizontal bar chart of feature correlations with target. Safe lag features shown in green, leakage risks in red.">lag1_closing_subs: 0.67, lag1_churn: 0.46, lag1_filed_claims: 0.46, Churn raw: 0.72, Claims raw: 0.68</canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="sc-section">
+  <div class="sc-label">03 · Data risks & cleaning</div>
+  <div class="leak-box">
+    <div style="font-size:13px;font-weight:700;color:#e65100;margin-bottom:.4rem;"><i class="ti ti-alert-triangle" aria-hidden="true" style="margin-right:4px;"></i>Data leakage — what it is and why it matters</div>
+    <div style="font-size:13px;color:#424242;line-height:1.75;">We are predicting how many subscribers are active at the <em>end of this month</em>. But Churn (who cancelled) and Filed Claims (who claimed warranty) only become known <em>after</em> the month closes — at the exact same moment as our target. Using them directly as features means the model is trained on information that would not exist in a real forecast scenario. It would look accurate in training but fail in production.</div>
+  </div>
+  <div class="fix-box">
+    <div style="font-size:13px;font-weight:700;color:#2e7d32;margin-bottom:.4rem;"><i class="ti ti-check" aria-hidden="true" style="margin-right:4px;"></i>Fix: lag-1 features</div>
+    <div style="font-size:13px;color:#424242;line-height:1.75;">Use the <em>previous month's</em> Churn and Filed Claims instead. These are fully known before the forecast period begins — a legitimate leading indicator, not a peek at the answer. The same lag is applied to the prior month's subscriber count, which becomes the strongest honest predictor (r = 0.67).</div>
+  </div>
+  <div class="sc-card-white" style="margin-top:.5rem;">
+    <div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:.5rem;">Before vs after — feature status</div>
+    <table>
+      <tr><th>Feature</th><th>Original status</th><th>Action</th><th>Final status</th></tr>
+      <tr><td class="key">Churn</td><td><span class="tag-red">Concurrent — leaked</span></td><td>Shift 1 month</td><td><span class="tag-grn">lag1_churn ✓</span></td></tr>
+      <tr><td class="key">Filed Claims</td><td><span class="tag-red">Concurrent — leaked</span></td><td>Shift 1 month</td><td><span class="tag-grn">lag1_filed_claims ✓</span></td></tr>
+      <tr><td class="key">Closing Subs Monthly</td><td><span class="tag-red">Target — leaked</span></td><td>Shift 1 month</td><td><span class="tag-grn">lag1_closing_subs ✓</span></td></tr>
+      <tr><td class="key">IR Rate, Claims Swap/Replacement</td><td><span class="tag-red">Concurrent — leaked</span></td><td>Dropped entirely</td><td><span class="tag-amb">Removed</span></td></tr>
+      <tr><td class="key">Model Age (Days), Size</td><td><span class="tag-grn">Safe — known in advance</span></td><td>Kept as-is</td><td><span class="tag-grn">Retained ✓</span></td></tr>
+    </table>
+  </div>
+  <div class="sc-grid2" style="margin-top:.85rem;">
+    <div class="sc-card">
+      <div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:.4rem;"><i class="ti ti-trash" aria-hidden="true" style="margin-right:4px;"></i>Pre-order rows dropped — 2,128 rows</div>
+      <div style="font-size:12px;color:#424242;line-height:1.7;">Retailers and carriers pre-register subscriber slots in the system before a device officially launches, creating rows where Model Age &lt; 0 — the device hasn't shipped yet. These rows produce corrupt lag values: the "previous month" would be a pre-launch placeholder, not a real subscriber count, poisoning the feature for the first real month of each device.<br><br><strong style="color:#1b5e20;">Justification:</strong> 2,128 rows = 16.3% of row count, but only ~4.2% of total subscriber volume. The data integrity gain far outweighs the information loss.</div>
+    </div>
+    <div class="sc-card">
+      <div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:.4rem;"><i class="ti ti-trash" aria-hidden="true" style="margin-right:4px;"></i>NaN lag rows dropped — 91 rows</div>
+      <div style="font-size:12px;color:#424242;line-height:1.7;">The first observed month for each (country, model, colour) group has no prior month to look back at — lag values are undefined. These 91 rows are dropped rather than filled with zero, because zero would be a false signal implying zero prior subscribers, not missing data.<br><br><strong style="color:#1b5e20;">Final dataset after all cleaning:</strong><br>10,859 rows · 56 features ready for modelling.</div>
+    </div>
+  </div>
+</div>
+
+<div class="sc-section">
+  <div class="sc-label">04 · Methodology</div>
+  <div class="sc-card-white" style="margin-bottom:.85rem;">
+    <div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:.5rem;">Final feature set</div>
+    <table>
+      <tr><th style="width:38%;">Feature</th><th>Type</th><th>Business meaning</th></tr>
+      <tr><td class="key">lag1_closing_subs</td><td><span class="tag-grn">Lag · numeric</span></td><td>Prior month subscribers — demand is sticky (r = 0.67)</td></tr>
+      <tr><td class="key">lag1_churn</td><td><span class="tag-grn">Lag · numeric</span></td><td>Prior month cancellations — base shrinking signal (r = 0.46)</td></tr>
+      <tr><td class="key">lag1_filed_claims</td><td><span class="tag-grn">Lag · numeric</span></td><td>Prior month claims — base activity level (r = 0.46)</td></tr>
+      <tr><td class="key">Model Age (Days)</td><td><span class="tag-grn">Numeric</span></td><td>Lifecycle stage — fully known before forecast period</td></tr>
+      <tr><td class="key">Size (GB)</td><td><span class="tag-grn">Numeric</span></td><td>Storage capacity — proxy for price tier</td></tr>
+      <tr><td class="key">country, ModelFamily, Colour</td><td><span class="tag-grn">One-hot encoded</span></td><td>Market and SKU identity — 51 dummy columns</td></tr>
+    </table>
+  </div>
+  <div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:.5rem;">Train / validation / test split — chronological, no shuffle</div>
+  <div class="split-bar" style="margin-bottom:.75rem;">
+    <div class="split-seg" style="flex:6;background:#1b5e20;color:#fff;">Train 60% &nbsp;·&nbsp; 6,515 rows</div>
+    <div class="split-seg" style="flex:1.5;background:#388e3c;color:#fff;">Val 15%</div>
+    <div class="split-seg" style="flex:2.5;background:#81c784;color:#1b5e20;">Test 25% &nbsp;·&nbsp; 2,715 rows</div>
+  </div>
+  <div class="sc-grid2">
+    <div class="sc-card">
+      <div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:.4rem;">Why a validation set?</div>
+      <div style="font-size:12px;color:#424242;line-height:1.7;">The validation set (15%) is used exclusively for hyperparameter tuning — finding the optimal regularisation strength for Ridge and Lasso, and tree depth for Random Forest and XGBoost. The test set is never seen until final evaluation, ensuring that reported metrics are a true, unbiased estimate of real-world performance.</div>
+    </div>
+    <div class="sc-card">
+      <div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:.4rem;">Why TimeSeriesSplit, not K-fold?</div>
+      <div style="font-size:12px;color:#424242;line-height:1.7;">Standard K-fold randomly shuffles months across folds — January 2023 could appear in training while December 2022 is in validation, letting future data leak into the past. TimeSeriesSplit enforces strict chronological order: each fold trains only on months before its validation window, exactly mirroring how the model will be used in production.</div>
+    </div>
+  </div>
+</div>
+
+<div class="sc-section">
+  <div class="sc-label">05 · Model evaluation</div>
+  <div class="mdl-card">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:.5rem;"><span class="badge-base">Baseline</span><span style="font-size:15px;font-weight:600;color:#212121;">Ridge regression</span></div>
+    <div style="font-size:13px;color:#424242;margin-bottom:.3rem;"><strong>Concept:</strong> Linear model with L2 penalty that shrinks all coefficients toward zero. Assumes subscriber count has a linear relationship with each feature. Stable and interpretable.</div>
+    <div style="font-size:13px;color:#424242;margin-bottom:.5rem;"><strong>Best for:</strong> Market-level planning and communicating key drivers to non-technical stakeholders where interpretability matters more than raw accuracy.</div>
+    <div class="metric-row">
+      <div class="metric-cell"><div class="metric-lbl">MAE</div><div class="metric-val">869</div></div>
+      <div class="metric-cell"><div class="metric-lbl">RMSE</div><div class="metric-val">1,309</div></div>
+      <div class="metric-cell"><div class="metric-lbl">R²</div><div class="metric-val">0.44</div></div>
+      <div class="metric-cell"><div class="metric-lbl">MAPE</div><div class="metric-val">620%</div></div>
+    </div>
+  </div>
+  <div class="mdl-card">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:.5rem;"><span class="badge-base">Baseline</span><span style="font-size:15px;font-weight:600;color:#212121;">Lasso regression</span></div>
+    <div style="font-size:13px;color:#424242;margin-bottom:.3rem;"><strong>Concept:</strong> Linear model with L1 penalty that drives irrelevant feature coefficients to exactly zero — automatic feature selection. Of 56 input features, Lasso retained only the statistically meaningful ones, zeroing out the noise.</div>
+    <div style="font-size:13px;color:#424242;margin-bottom:.5rem;"><strong>Best for:</strong> When a lean, explainable model is needed and feature reduction is valuable for downstream reporting or regulatory review.</div>
+    <div class="metric-row">
+      <div class="metric-cell"><div class="metric-lbl">MAE</div><div class="metric-val">946</div></div>
+      <div class="metric-cell"><div class="metric-lbl">RMSE</div><div class="metric-val">1,362</div></div>
+      <div class="metric-cell"><div class="metric-lbl">R²</div><div class="metric-val">0.39</div></div>
+      <div class="metric-cell"><div class="metric-lbl">MAPE</div><div class="metric-val">651%</div></div>
+    </div>
+  </div>
+  <div class="mdl-card">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:.5rem;"><span class="badge-chal">Challenger</span><span style="font-size:15px;font-weight:600;color:#212121;">Random Forest</span></div>
+    <div style="font-size:13px;color:#424242;margin-bottom:.3rem;"><strong>Concept:</strong> Ensemble of 200 decision trees, each trained on a random subset of data and features. Predictions are averaged across trees. Does not assume linearity — captures interactions between lifecycle stage, market, and churn signals.</div>
+    <div style="font-size:13px;color:#424242;margin-bottom:.5rem;"><strong>Best for:</strong> Forecasting new device models not seen during training. Random Forest learned generalizable demand rules rather than memorizing specific SKU identities (see section 06).</div>
+    <div class="metric-row">
+      <div class="metric-cell"><div class="metric-lbl">MAE</div><div class="metric-val">667</div></div>
+      <div class="metric-cell"><div class="metric-lbl">RMSE</div><div class="metric-val">1,140</div></div>
+      <div class="metric-cell"><div class="metric-lbl">R²</div><div class="metric-val">0.57</div></div>
+      <div class="metric-cell"><div class="metric-lbl">MAPE</div><div class="metric-val">866%</div></div>
+    </div>
+  </div>
+  <div class="mdl-card mdl-champion">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:.5rem;"><span class="badge-champ">Champion</span><span style="font-size:15px;font-weight:600;color:#212121;">XGBoost</span></div>
+    <div style="font-size:13px;color:#424242;margin-bottom:.3rem;"><strong>Concept:</strong> Gradient boosting — builds decision trees sequentially, each one correcting the residual errors of the previous. Iteratively learns to fix large misses on high-volume SKUs. Widely regarded as best-in-class for structured tabular data.</div>
+    <div style="font-size:13px;color:#424242;margin-bottom:.5rem;"><strong>Best for:</strong> Maximising forecast accuracy on known SKUs in existing markets — lowest MAE and RMSE on the held-out test set with 23.2% RMSE reduction over the best linear model.</div>
+    <div class="metric-row">
+      <div class="metric-cell"><div class="metric-lbl">MAE</div><div class="metric-val" style="color:#1b5e20;">552</div></div>
+      <div class="metric-cell"><div class="metric-lbl">RMSE</div><div class="metric-val" style="color:#1b5e20;">1,006</div></div>
+      <div class="metric-cell"><div class="metric-lbl">R²</div><div class="metric-val" style="color:#1b5e20;">0.67</div></div>
+      <div class="metric-cell"><div class="metric-lbl">MAPE</div><div class="metric-val">882%</div></div>
+    </div>
+  </div>
+  <div class="legend" style="margin-top:.75rem;">
+    <span><span class="legend-dot" style="background:#1b5e20;"></span>XGBoost</span>
+    <span><span class="legend-dot" style="background:#388e3c;"></span>Random Forest</span>
+    <span><span class="legend-dot" style="background:#81c784;"></span>Ridge</span>
+    <span><span class="legend-dot" style="background:#c8e6c9;border:1px solid #a5d6a7;"></span>Lasso</span>
+  </div>
+  <div class="chart-wrap" style="height:230px;margin-bottom:1rem;">
+    <canvas id="modelChart" role="img" aria-label="Grouped bar chart comparing MAE and RMSE across all 4 models. XGBoost has the lowest values.">MAE: Ridge 869, Lasso 946, RF 667, XGBoost 552. RMSE: Ridge 1309, Lasso 1362, RF 1140, XGBoost 1006.</canvas>
+  </div>
+  <div class="callout-box">
+    <div style="font-size:12px;color:#a5d6a7;font-weight:600;margin-bottom:.35rem;"><i class="ti ti-info-circle" aria-hidden="true" style="margin-right:4px;"></i>What MAE of 552 means in practice</div>
+    <div style="font-size:13px;color:#e8f5e9;line-height:1.75;">XGBoost's MAE of 552 means on average the forecast is off by ±552 subscribers <em>per SKU per month</em>. For <strong style="color:#fff;">iPhone XS Max in California</strong> with ~18,000 active subscribers, that is a <strong style="color:#fff;">3% error</strong> — operationally acceptable for claims reserve sizing and parts inventory planning. The error is most relevant on high-volume flagships where operational decisions carry the most financial weight.</div>
+  </div>
+</div>
+
+<div class="sc-section">
+  <div class="sc-label">06 · Model suitability & limitations</div>
+  <div style="font-size:14px;font-weight:600;color:#1b5e20;margin-bottom:.5rem;">Feature importance: what each model actually learned</div>
+  <div class="sc-grid2" style="margin-bottom:.85rem;">
+    <div>
+      <div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:.25rem;">XGBoost — learned SKU identities</div>
+      <div style="font-size:12px;color:#616161;margin-bottom:.5rem;">Top features are specific model names and colour variants. XGBoost memorized which devices are historically popular rather than learning generalizable demand drivers.</div>
+      <div class="legend"><span><span class="legend-dot" style="background:#1b5e20;"></span>Importance (gain)</span></div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="xgbImpChart" role="img" aria-label="Horizontal bar chart of XGBoost top feature importances. iPhone XS Max and Colour Glow dominate.">iPhone XS Max: 0.14, Colour Glow: 0.11, Size: 0.06, iPhone 12 Pro Max: 0.05, Colour Brown: 0.03</canvas></div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:#388e3c;margin-bottom:.25rem;">Random Forest — learned demand rules</div>
+      <div style="font-size:12px;color:#616161;margin-bottom:.5rem;">Top features are generalizable business signals. Random Forest learned <em>why</em> subscribers behave the way they do — stickiness, lifecycle, and churn patterns that transfer to new devices.</div>
+      <div class="legend"><span><span class="legend-dot" style="background:#66bb6a;"></span>Importance (gain)</span></div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="rfImpChart" role="img" aria-label="Horizontal bar chart of Random Forest top feature importances. Last month subscribers dominates at 0.36.">lag1_closing_subs: 0.36, Size: 0.11, lag1_churn: 0.11, lag1_filed_claims: 0.09, Device age: 0.08</canvas></div>
+    </div>
+  </div>
+  <div class="sc-card-white" style="margin-bottom:.75rem;">
+    <div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:.5rem;">Model selection by business scenario</div>
+    <table>
+      <tr><th style="width:42%;">Business scenario</th><th>Recommended model</th><th>Reason</th></tr>
+      <tr><td>Monthly operations — existing fleet</td><td><span class="badge-champ" style="font-size:11px;">XGBoost</span></td><td>Lowest MAE / RMSE on known SKUs</td></tr>
+      <tr><td>New device pre-launch forecast</td><td><span class="badge-chal" style="font-size:11px;">Random Forest</span></td><td>Generalizable lifecycle and churn rules</td></tr>
+      <tr><td>Stakeholder reporting</td><td><span class="badge-base" style="font-size:11px;">Ridge</span></td><td>Interpretable coefficients, no black-box</td></tr>
+      <tr><td>Low-volume SKUs (&lt; 500 subs)</td><td><span class="tag-amb">Manual review</span></td><td>Model error can exceed actual count</td></tr>
+    </table>
+  </div>
+  <div class="sc-card">
+    <div style="font-size:13px;font-weight:600;color:#1b5e20;margin-bottom:.4rem;"><i class="ti ti-alert-circle" aria-hidden="true" style="margin-right:4px;"></i>Note on MAPE (882%)</div>
+    <div style="font-size:13px;color:#424242;line-height:1.7;">MAPE is inflated by low-volume SKUs where actual subscriber counts approach zero — even a small absolute miss becomes a very large percentage. This is a known limitation of MAPE for skewed target distributions. MAE (552) and RMSE (1,006) are the reliable primary metrics here. The right-skewed distribution also means all models are more accurate on high-volume flagship SKUs and proportionally less reliable on niche low-volume devices.</div>
+  </div>
+</div>
+
+<div class="sc-section">
+  <div class="sc-label">07 · Recommendations</div>
+  <div class="rec-card">
+    <div class="rec-icon"><i class="ti ti-player-play" aria-hidden="true" style="font-size:14px;color:#fff;"></i></div>
+    <div><div style="font-size:13px;font-weight:600;color:#212121;margin-bottom:.2rem;">Deploy XGBoost for monthly operational forecasting on existing device fleet</div><div style="font-size:13px;color:#424242;">Use as the primary production model for claims reserve sizing, parts inventory planning, and renewal campaign targeting on all currently active SKUs.</div></div>
+  </div>
+  <div class="rec-card">
+    <div class="rec-icon"><i class="ti ti-device-mobile" aria-hidden="true" style="font-size:14px;color:#fff;"></i></div>
+    <div><div style="font-size:13px;font-weight:600;color:#212121;margin-bottom:.2rem;">Deploy Random Forest for pre-launch forecasting of new device models</div><div style="font-size:13px;color:#424242;">When a device has no historical subscriber data, Random Forest's generalizable rules — subscriber stickiness, lifecycle decay, prior month churn signal — produce more reliable estimates than XGBoost's SKU-memorization approach.</div></div>
+  </div>
+  <div class="rec-card">
+    <div class="rec-icon"><i class="ti ti-filter" aria-hidden="true" style="font-size:14px;color:#fff;"></i></div>
+    <div><div style="font-size:13px;font-weight:600;color:#212121;margin-bottom:.2rem;">Flag low-volume SKUs for manual review</div><div style="font-size:13px;color:#424242;">Apply a 500-subscriber threshold: SKUs below this floor should bypass model-driven decisions and go to manual analyst review, as model absolute error can exceed the actual subscriber count.</div></div>
+  </div>
+  <div class="rec-card">
+    <div class="rec-icon"><i class="ti ti-math" aria-hidden="true" style="font-size:14px;color:#fff;"></i></div>
+    <div><div style="font-size:13px;font-weight:600;color:#212121;margin-bottom:.2rem;">Short-term: apply log-transform on the target variable</div><div style="font-size:13px;color:#424242;">The right-skewed distribution causes all models to over-invest in fitting high-volume flagship outliers. Log-transforming Closing Subs Monthly before training (and exponentiating predictions back) would compress the skew and improve accuracy proportionally across the full SKU range.</div></div>
+  </div>
+  <div class="rec-card">
+    <div class="rec-icon"><i class="ti ti-chart-dots" aria-hidden="true" style="font-size:14px;color:#fff;"></i></div>
+    <div><div style="font-size:13px;font-weight:600;color:#212121;margin-bottom:.2rem;">Medium-term: integrate SHAP values for per-SKU explainability</div><div style="font-size:13px;color:#424242;">SHAP (SHapley Additive exPlanations) would allow analysts to understand exactly why the model forecasts a specific number for a specific device — which features drove the prediction up or down — making results actionable and auditable for business stakeholders.</div></div>
+  </div>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const G={dark:'#1b5e20',med:'#2e7d32',lgt:'#66bb6a',pale:'#a5d6a7',xtra:'#c8e6c9'};
+const def={responsive:true,maintainAspectRatio:false};
+
+new Chart(document.getElementById('distChart'),{type:'bar',data:{labels:['0–500','500–1k','1k–2k','2k–5k','5k–10k','10k+'],datasets:[{label:'Rows',data:[2500,1800,1600,1800,900,460],backgroundColor:G.med,borderWidth:0}]},options:{...def,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{ticks:{font:{size:11},callback:v=>v.toLocaleString()}}}}});
+
+new Chart(document.getElementById('trendChart'),{type:'line',data:{labels:['2019','2020','2021','2022','2023'],datasets:[{label:'Total subs (indexed)',data:[100,130,175,170,165],borderColor:G.dark,backgroundColor:'rgba(27,94,32,0.08)',tension:0.4,pointRadius:5,pointBackgroundColor:G.dark,fill:true,borderWidth:2}]},options:{...def,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:12}}},y:{ticks:{font:{size:11}},title:{display:true,text:'Index (2019 = 100)',font:{size:11}}}}}});
+
+new Chart(document.getElementById('lifecycleChart'),{type:'line',data:{labels:['0','180','360','540','720','900','1080','1260','1440','1800+'],datasets:[{label:'Avg subscribers',data:[800,1800,2600,3100,2700,2100,1600,1200,900,600],borderColor:G.lgt,backgroundColor:'rgba(102,187,106,0.08)',tension:0.4,pointRadius:4,pointBackgroundColor:G.lgt,fill:true,borderWidth:2}]},options:{...def,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}},title:{display:true,text:'Device age (days)',font:{size:11}}},y:{ticks:{font:{size:11}}}}}});
+
+new Chart(document.getElementById('corrChart'),{type:'bar',data:{labels:['lag1_subs','lag1_churn','lag1_claims','Churn (raw)','Claims (raw)'],datasets:[{label:'Correlation',data:[0.67,0.46,0.46,0.72,0.68],backgroundColor:['#2e7d32','#2e7d32','#2e7d32','#e53935','#e53935'],borderWidth:0}]},options:{...def,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:0.9,ticks:{font:{size:11}}},y:{ticks:{font:{size:12}}}}}});
+
+new Chart(document.getElementById('modelChart'),{type:'bar',data:{labels:['Ridge','Lasso','Random Forest','XGBoost'],datasets:[{label:'MAE',data:[869,946,667,552],backgroundColor:[G.pale,G.pale,G.lgt,G.dark],borderWidth:0},{label:'RMSE',data:[1309,1362,1140,1006],backgroundColor:[G.xtra,G.xtra,G.med+'aa',G.med],borderWidth:0}]},options:{...def,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw.toLocaleString()}}},scales:{x:{ticks:{font:{size:12}}},y:{ticks:{font:{size:11},callback:v=>v.toLocaleString()}}}}});
+
+new Chart(document.getElementById('xgbImpChart'),{type:'bar',data:{labels:['iPhone XS Max','Colour: Glow','Size (storage)','iPhone 12 Pro Max','Colour: Brown'],datasets:[{label:'Importance',data:[0.14,0.11,0.06,0.05,0.03],backgroundColor:G.dark,borderWidth:0}]},options:{...def,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:0.18,ticks:{font:{size:11}}},y:{ticks:{font:{size:11}}}}}});
+
+new Chart(document.getElementById('rfImpChart'),{type:'bar',data:{labels:['Last month subs','Size (storage)','Last month churn','Last month claims','Device age'],datasets:[{label:'Importance',data:[0.36,0.11,0.11,0.09,0.08],backgroundColor:G.lgt,borderWidth:0}]},options:{...def,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:0.42,ticks:{font:{size:11}}},y:{ticks:{font:{size:11}}}}}});
+</script>
+</body>
+</html>
