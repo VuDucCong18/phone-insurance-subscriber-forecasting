@@ -436,17 +436,24 @@ def plot_model_comparison(df_res):
     metrics     = ["MAE", "RMSE", "MAPE"]
     model_order = ["Ridge", "Lasso", "Random Forest", "XGBoost"]
 
+    champion   = test_res["RMSE"].idxmin()
+    challenger = test_res["RMSE"].drop(champion).idxmin()
+    non_linear = {"Random Forest", "XGBoost"}
+    baselines  = [m for m in model_order if m not in non_linear]
+
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    fig.suptitle("Model Comparison — Held-Out Test Set\n"
-                 "Champion: XGBoost  |  Challenger: Random Forest  |  "
-                 "Baselines: Ridge, Lasso",
-                 fontsize=12, fontweight="bold", y=1.03)
+    fig.suptitle(
+        f"Model Comparison — Held-Out Test Set\n"
+        f"Champion: {champion}  |  Challenger: {challenger}  |  "
+        f"Baselines: {', '.join(baselines)}",
+        fontsize=12, fontweight="bold", y=1.03,
+    )
 
     for ax, metric in zip(axes, metrics):
         vals  = test_res.loc[model_order, metric]
         best  = vals.idxmin()
         cols  = [COLORS[m] for m in model_order]
-        alpha = [1.0 if m in [best, "Random Forest"] else 0.55
+        alpha = [1.0 if m in [champion, challenger] else 0.55
                  for m in model_order]
         # Draw each bar individually so alpha can vary per bar
         bar_patches = []
