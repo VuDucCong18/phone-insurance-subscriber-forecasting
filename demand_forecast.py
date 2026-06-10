@@ -53,7 +53,7 @@ def evaluate(model, X, y, label=""):
     preds = model.predict(X)
     metrics = {
         "MAE":  mean_absolute_error(y, preds),
-        "RMSE": mean_squared_error(y, preds, squared=False),
+        "RMSE": np.sqrt(mean_squared_error(y, preds)),
         "MAPE": mape(y, preds),
         "R²":   r2_score(y, preds),
     }
@@ -184,13 +184,13 @@ def time_series_cv(X, y, n_splits=5):
                            random_state=RANDOM_STATE, n_jobs=-1, verbosity=0)
         xgb.fit(Xtr, ytr)
         results["XGBoost"].append(
-            mean_squared_error(yvl, xgb.predict(Xvl), squared=False)
+            np.sqrt(mean_squared_error(yvl, xgb.predict(Xvl)))
         )
 
         ridge = Ridge(alpha=1000)
         ridge.fit(Xtr, ytr)
         results["Ridge"].append(
-            mean_squared_error(yvl, ridge.predict(Xvl), squared=False)
+            np.sqrt(mean_squared_error(yvl, ridge.predict(Xvl)))
         )
 
     cv_df = pd.DataFrame(results, index=[f"Fold {i+1}" for i in range(n_splits)])
@@ -224,7 +224,7 @@ def train_models(X_train, y_train):
 
     for name, m in models.items():
         m.fit(X_train, y_train)
-        print(f"  ✓ {name}")
+        print(f"  [done] {name}")
 
     return models
 
@@ -243,7 +243,7 @@ def evaluate_all(models, X_val, y_val, X_test, y_test):
             rows.append({
                 "Model": name, "Split": split_label,
                 "MAE":  mean_absolute_error(ys, preds),
-                "RMSE": mean_squared_error(ys, preds, squared=False),
+                "RMSE": np.sqrt(mean_squared_error(ys, preds)),
                 "MAPE": mape(ys, preds),
                 "R²":   r2_score(ys, preds),
             })
