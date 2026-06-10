@@ -1,105 +1,121 @@
 # Phone Insurance Subscriber Forecasting
 
-Forecasting monthly active phone insurance subscribers (Closing Subs Monthly) across device models, markets, and colours — using a leakage-free ML pipeline with lag-1 features, walk-forward cross-validation, and a champion/challenger model evaluation framework.
+Forecasting monthly active phone insurance subscribers (**Closing Subs Monthly**) per device model, market, and colour — using a leakage-free ML pipeline with lag-1 features, walk-forward cross-validation, and a champion/challenger model evaluation framework.
+
+> Full interactive report: **[report.html](report.html)** — open in any browser for charts, model cards, and recommendations.
 
 ---
 
-## Business Context
+## About Asurion
 
-A phone insurance provider tracks the number of active subscribers per device model at the end of each month (**Closing Subs Monthly**). This is not units sold — it is the size of the insured base for a given device variant in a given market at a point in time.
+Asurion is a leading provider of device insurance, warranty, and support services for cell phones, consumer electronics, and home appliances. With over 300 million devices protected globally, accurate subscriber forecasting is critical to operational and financial planning.
 
-Accurate subscriber forecasts drive three operational decisions:
+**Closing Subs Monthly** is the number of active phone insurance subscribers at the end of each month for a given (device model, colour, market) combination. It is not units sold — it is the live insured base at a point in time.
+
+Forecasting this figure one month ahead drives three operational decisions:
 
 | Decision | Why it needs a forecast |
 |---|---|
-| Claims reserve sizing | Expected claims scale with the active subscriber base |
-| Device parts inventory | Warranty repairs require stocked components per model |
-| Renewal campaign targeting | Models approaching lifecycle decay need proactive retention |
-
-The dataset covers **Jan 2019 – Nov 2023**, three US markets (California, Nevada, Texas), three brands (Apple, Samsung, Oppo), and 40 device model families — totalling 13,381 rows across 25 columns.
+| Claims reserve sizing | Expected claims scale directly with the active subscriber base |
+| Device parts inventory | Warranty repairs require stocked components per model — wrong forecasts cause stockouts or overstock |
+| Renewal campaign targeting | Models approaching lifecycle decay need proactive retention to slow subscriber loss |
 
 ---
 
-## Key Insight: Data Leakage Risk
+## Dataset
 
-Two features in the raw data are highly correlated with the target but **cannot be used as concurrent features**:
+| Attribute | Detail |
+|---|---|
+| Period | Jan 2019 – Nov 2023 |
+| Markets | California, Nevada, Texas |
+| Brands | Apple, Samsung, Oppo |
+| Example models | iPhone XS Max, Samsung Galaxy S21, Oppo A15 |
+| Raw size | 13,381 rows × 25 columns |
+| After cleaning | 10,859 rows × 56 features |
 
-- **Churn** — subscribers who cancelled *in the same month*. This is known only after the month closes, the same moment as the target.
-- **Filed Claims** — warranty claims submitted *in the same month*. Same problem.
+---
 
-Using them directly as features would constitute data leakage: the model would be trained on information that would not exist at forecast time. Both are instead **lagged by 1 month** — prior month values are legitimate signals available before the forecast period begins.
+## Data Leakage & How It Was Fixed
 
-The high correlation also partly reflects a **size effect**: churn and claims both scale with the installed base, so they correlate with the target simply because larger subscriber bases produce more of both. This is not a causal relationship.
+Two columns in the raw data are highly correlated with the target but **cannot be used as concurrent features**:
+
+- **Churn** — subscribers who cancelled in the same month. Only known after the month closes, the same moment as the target.
+- **Filed Claims** — warranty claims submitted in the same month. Same problem.
+- **IR Rate** (Swap, Replacement, Monthly) — incidence rate calculated as `Filed Claims / Closing Subs Monthly`. Contains the target in its denominator — direct leakage even after lagging.
+
+Using any of these directly means the model is trained on information that would not exist at real forecast time. The fix is **lag-1 features**: shift each value back one month so the model only sees information available before the forecast period begins.
+
+| Feature | Status | Action |
+|---|---|---|
+| Churn | Concurrent — leaked | Shifted 1 month → `lag1_churn` |
+| Filed Claims | Concurrent — leaked | Shifted 1 month → `lag1_filed_claims` |
+| Closing Subs Monthly | Target — leaked | Shifted 1 month → `lag1_closing_subs` |
+| IR Rate, Claims Swap/Replacement | Concurrent + formula leakage | Dropped entirely |
+| Model Age (Days), Size | Known in advance | Retained as-is |
+
+The high correlation of Churn and Claims with the target also partly reflects a **size effect** — both scale with the installed base, so larger subscriber bases naturally produce more of both. This is not a causal relationship.
+
+---
+
+## Data Cleaning
+
+- **Pre-order rows dropped (2,128 rows / 16.3%)** — retailers and carriers pre-register subscriber slots before a device launches, creating rows where `Model Age (Days) < 0`. These produce corrupt lag values (the "prior month" is a pre-launch placeholder). Only ~4.2% of total subscriber volume is lost — the data integrity gain outweighs the row loss.
+- **NaN lag rows dropped (91 rows)** — the first observed month of each (country, ModelFamily) group has no prior month to look back at. Dropped rather than zero-filled, as zero falsely implies zero prior subscribers.
+- **Horizon filter** — rows limited to model families present in Nov 2023, ensuring all SKUs have a valid forecast base.
 
 ---
 
 ## Methodology
 
-### Target Variable
+### Feature set
 
-```
-Closing Subs Monthly  =  active subscribers at month-end for a given
-                         (country, ModelFamily, Colour, YearMonth) combination
-```
-
-Right-skewed distribution (median ~700, mean ~1,400, max ~25,000) — justifies tree-based models over plain linear regression.
-
-### Feature Engineering
-
-| Feature | Source | Notes |
+| Feature | Type | Business meaning |
 |---|---|---|
-| `lag1_closing_subs` | Closing Subs Monthly, shifted 1 month | Strongest honest predictor (r = 0.67) |
-| `lag1_churn` | Churn, shifted 1 month | Retention pressure signal (r = 0.46) |
-| `lag1_filed_claims` | Filed Claims, shifted 1 month | Base activity signal (r = 0.46) |
-| `Model Age (Days)` | Days since device launch | Captures lifecycle stage |
-| `Size` | Storage capacity (GB) | Proxy for price tier |
-| `country`, `ModelFamily`, `Colour` | One-hot encoded (drop_first=True) | Market and SKU identity |
+| `lag1_closing_subs` | Lag · numeric | Prior month subscribers — demand is sticky (r = 0.67) |
+| `lag1_churn` | Lag · numeric | Prior month cancellations — base shrinking signal (r = 0.46) |
+| `lag1_filed_claims` | Lag · numeric | Prior month claims — base activity level (r = 0.46) |
+| `Model Age (Days)` | Numeric | Lifecycle stage — fully known before forecast period |
+| `Size` | Numeric | Storage capacity (GB) — proxy for price tier |
+| `country`, `ModelFamily`, `Colour` | One-hot encoded (drop_first=True) | Market and SKU identity — 51 dummy columns |
 
-Lag shifts are applied **within each (country, ModelFamily) group** to avoid cross-group contamination.
-
-**Dropped features** — concurrent with the target (leakage): Churn, Filed Claims, Claims, Claims Swap, Claims Replacement, IR Rate Swap, IR Rate Replacement, IR Rate Monthly, Churn Rate, Model Age (Months).
-
-### Data Cleaning
-
-- **Pre-order rows dropped**: 2,128 rows where `Model Age (Days) < 0` (16.3% of rows, ~4.2% of subscriber volume). These corrupt lag calculations for the first real month of each model.
-- **NaN lag rows dropped**: 91 rows representing the first observed month of each (country, ModelFamily) group — no prior month exists to look back at.
-- **Horizon filter**: rows limited to model families present in the final month (Nov 2023), ensuring forecast continuity.
-- Final dataset: **10,859 rows × 56 features**.
+One-hot encoding converts categorical columns into binary (1/0) columns — one per unique value minus one (the dropped reference category eliminates multicollinearity).
 
 ### Train / Validation / Test Split
 
 Chronological split, no shuffling:
 
 ```
-Train  60%  →  Jan 2019 – ~Apr 2022   (6,515 rows)
-Val    15%  →  ~May 2022 – ~Dec 2022  (1,629 rows)  ← hyperparameter tuning
-Test   25%  →  ~Jan 2023 – Nov 2023   (2,715 rows)  ← held-out, final eval only
+Train  60%  →  Jan 2019 – ~Apr 2022   (6,515 rows)   ← model training
+Val    15%  →  ~May 2022 – ~Dec 2022  (1,629 rows)   ← hyperparameter tuning only
+Test   25%  →  ~Jan 2023 – Nov 2023   (2,715 rows)   ← held-out, final eval only
 ```
+
+The validation set is reserved exclusively for hyperparameter tuning (alpha for Ridge/Lasso, tree depth for RF/XGBoost). The test set is never touched until final evaluation, ensuring reported metrics are a true unbiased estimate of real-world performance.
 
 ### Cross-Validation
 
-**TimeSeriesSplit (5 folds, walk-forward)** — each fold trains only on data before its validation window. Standard K-fold is not used as it would allow future data to leak into training.
+**TimeSeriesSplit (5 folds, walk-forward)** is used instead of standard K-fold. K-fold randomly shuffles months across folds, so future months can appear in training — leaking the future into the past. TimeSeriesSplit enforces strict chronological ordering: each fold trains only on data before its validation window, mirroring real production conditions.
 
-`StandardScaler` is fitted on the training fold only and applied to validation/test, preventing scale leakage.
+`StandardScaler` is fitted on the training fold only and applied to validation/test to prevent scale leakage.
 
 ---
 
 ## Models
 
-A **champion/challenger** framework is used to compare linear baselines against non-linear models.
+A **champion/challenger** framework compares linear baselines against non-linear tree models.
 
-| Role | Model | Notes |
+| Role | Model | Concept |
 |---|---|---|
-| Linear baseline | **Ridge** (RidgeCV) | L2 regularisation, alpha tuned via TimeSeriesSplit |
-| Linear + selection | **Lasso** (LassoCV) | L1 regularisation; drives irrelevant coefficients to zero |
-| Challenger | **Random Forest** | 200 trees, max_depth=15, max_features=0.5 |
-| Champion | **XGBoost** | 300 estimators, lr=0.05, subsample=0.8, colsample_bytree=0.8 |
+| Baseline | **Ridge** (RidgeCV) | Linear with L2 penalty — shrinks all coefficients toward zero. Interpretable, suitable for stakeholder reporting. |
+| Baseline | **Lasso** (LassoCV) | Linear with L1 penalty — drives irrelevant coefficients to exactly zero. Automatic feature selection. |
+| Challenger | **Random Forest** | 200 trees averaging predictions. Does not assume linearity. Learns generalizable demand rules — best for new device launches. |
+| Champion | **XGBoost** | Gradient boosting — trees built sequentially, each correcting prior residuals. Best accuracy on known SKUs. |
 
 ---
 
 ## Results
 
-### Time-Series CV (mean RMSE across 5 walk-forward folds)
+### Time-series CV mean RMSE (5 walk-forward folds)
 
 | Model | Mean RMSE | Std |
 |---|---|---|
@@ -107,7 +123,7 @@ A **champion/challenger** framework is used to compare linear baselines against 
 | Lasso | 1,576 | 268 |
 | XGBoost | 899 | 240 |
 
-### Held-Out Test Set
+### Held-out test set
 
 | Model | MAE | RMSE | R² | MAPE |
 |---|---|---|---|---|
@@ -116,9 +132,30 @@ A **champion/challenger** framework is used to compare linear baselines against 
 | Random Forest | 667 | 1,140 | 0.57 | 866% |
 | **XGBoost (champion)** | **552** | **1,006** | **0.67** | 882% |
 
-**Non-linear gain**: 23.2% RMSE reduction vs best linear model (Ridge).
+**Non-linear gain**: 23.2% RMSE reduction vs best linear model.
 
-> **Note on MAPE**: values are inflated by low-volume SKUs where the denominator (actual subscribers) approaches zero. MAE and RMSE are the more reliable metrics for this dataset.
+**On MAE**: an MAE of 552 means the forecast is off by ±552 subscribers per SKU per month on average. For a flagship like iPhone XS Max in California (~18,000 active subscribers), that is a 3% error — operationally acceptable for reserve sizing and inventory planning.
+
+**On MAPE**: values are inflated by low-volume SKUs where actual subscriber counts approach zero — even a small absolute miss becomes a large percentage. MAE and RMSE are the primary metrics for this dataset.
+
+### Feature importance finding
+
+XGBoost's top features are specific model names and colour variants (memorized which SKUs are popular). Random Forest's top features are generalizable demand drivers — prior month subscriber count (0.36), storage size (0.11), prior month churn (0.11), prior month claims (0.09), device age (0.08). This means:
+
+- **XGBoost** is more accurate for known SKUs in existing markets
+- **Random Forest** generalizes better to new device launches with no prior history
+
+---
+
+## Recommendations
+
+| Priority | Action |
+|---|---|
+| Deploy now | XGBoost for monthly operational forecasts on existing fleet |
+| Deploy now | Random Forest for pre-launch forecasts on new device models |
+| Deploy now | Flag SKUs with < 500 subscribers for manual review — model error can exceed actual count |
+| Short-term | Log-transform the target variable to reduce skew sensitivity across all models |
+| Medium-term | Integrate SHAP values for per-SKU explainability to business stakeholders |
 
 ---
 
@@ -141,13 +178,14 @@ demand_forecast.py
 └── forecast_future()         — Dec 2023 + Jan 2024 forecast using Nov 2023 lag-1 inputs
 ```
 
-### Output Files
+### Output files
 
 | File | Description |
 |---|---|
+| `report.html` | Full interactive model assessment report — open in browser |
 | `model_comparison.png` | MAE / RMSE / MAPE bar chart across all 4 models |
 | `lasso_feature_selection.png` | Non-zero Lasso coefficients and feature retention summary |
-| `feature_importance.png` | XGBoost and Random Forest top-15 feature importances |
+| `feature_importance.png` | XGBoost and Random Forest top-15 feature importances side by side |
 | `residual_analysis.png` | XGBoost predicted vs actual and residual distribution |
 | `forecast_202312_202401.csv` | Dec 2023 and Jan 2024 subscriber forecasts (XGBoost + RF) |
 
@@ -162,7 +200,7 @@ pip install pandas numpy scikit-learn xgboost matplotlib seaborn openpyxl
 # 2. Place the data file at the path configured in demand_forecast.py
 #    DATA_FILE = "Worksheet in ML_Assignment_2023.xlsx"
 
-# 3. Run EDA
+# 3. Run EDA (generates 8 exploratory charts)
 python eda.py
 
 # 4. Run forecasting pipeline
@@ -177,8 +215,9 @@ python demand_forecast.py
 
 ```
 .
-├── demand_forecast.py          # Main forecasting pipeline
-├── eda.py                      # Exploratory data analysis (8 charts)
+├── demand_forecast.py            # Main forecasting pipeline
+├── eda.py                        # Exploratory data analysis (8 charts)
+├── report.html                   # Interactive model assessment report
 ├── model_comparison.png
 ├── lasso_feature_selection.png
 ├── feature_importance.png
