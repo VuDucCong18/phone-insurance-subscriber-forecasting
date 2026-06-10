@@ -1,0 +1,21 @@
+# Data files (keep locally, don't commit large binaries to GitHub)
+*.xlsx
+*.xls
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+__pycache__/
+
+# Python
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.env
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
